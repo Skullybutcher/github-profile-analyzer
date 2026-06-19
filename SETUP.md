@@ -100,12 +100,8 @@ Edit `backend/.env.local`:
 ```
 NODE_ENV=development
 PORT=3001
-DATABASE_HOST=localhost
-DATABASE_PORT=3306
-DATABASE_USER=root
-DATABASE_PASSWORD=your_password
-DATABASE_NAME=github_analyzer
-GITHUB_TOKEN=ghp_xxxxxxxxxxxxx  # Optional
+DATABASE_URL=mysql://user:password@localhost:3306/github_analyzer
+GITHUB_TOKEN=ghp_xxxxxxxxxxxxx  
 FRONTEND_URL=http://localhost:3000
 ```
 

@@ -159,6 +159,10 @@ Open these URLs after starting the app:
 - Backend landing page: http://localhost:3001
 - Health check: http://localhost:3001/health
 
+## Postman Collection
+
+- link: `https://avionics-geoscientist-42766540-s-team.postman.co/workspace/My-Workspace~056eac6f-9fd3-47c7-8ba0-4beb75933433/collection/41864211-a7484dc6-a6ff-47a5-a599-3fe44ffeb948?action=share&creator=41864211`
+
 ## Project Structure
 
 ```
@@ -206,7 +210,7 @@ Submission checklist:
 - Live deployed API URL
 - README with setup instructions
 - Database schema/export
-- Postman collection if needed
+- Postman collection
 
 ## Live Endpoints
 
