@@ -1,0 +1,125 @@
+{
+  "info": {
+    "_postman_id": "a7484dc6-a6ff-47a5-a599-3fe44ffeb948",
+    "name": "Github-Analyzer",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "41864211"
+  },
+  "item": [
+    {
+      "name": "https://github-profile-analyzer-backend.vercel.app/api/analyze",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"username\": \"Skullybutcher\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://github-profile-analyzer-backend.vercel.app/api/analyze",
+          "protocol": "https",
+          "host": [
+            "github-profile-analyzer-backend",
+            "vercel",
+            "app"
+          ],
+          "path": [
+            "api",
+            "analyze"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "https://github-profile-analyzer-backend.vercel.app/api/analyze/Skullybutcher",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://github-profile-analyzer-backend.vercel.app/api/analyze/Skullybutcher",
+          "protocol": "https",
+          "host": [
+            "github-profile-analyzer-backend",
+            "vercel",
+            "app"
+          ],
+          "path": [
+            "api",
+            "analyze",
+            "Skullybutcher"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "https://github-profile-analyzer-backend.vercel.app/api/history",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://github-profile-analyzer-backend.vercel.app/api/history?page=1&limit=10",
+          "protocol": "https",
+          "host": [
+            "github-profile-analyzer-backend",
+            "vercel",
+            "app"
+          ],
+          "path": [
+            "api",
+            "history"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "https://github-profile-analyzer-backend.vercel.app/health",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "https://github-profile-analyzer-backend.vercel.app/health",
+          "protocol": "https",
+          "host": [
+            "github-profile-analyzer-backend",
+            "vercel",
+            "app"
+          ],
+          "path": [
+            "health"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
