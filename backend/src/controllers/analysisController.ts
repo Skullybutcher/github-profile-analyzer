@@ -60,7 +60,8 @@ export async function getUserAnalysis(req: Request, res: Response): Promise<void
       return
     }
 
-    const analysis = await getAnalysisByUsername(username)
+    const clean = username.trim().replace(/^@/, '').toLowerCase()
+    const analysis = await getAnalysisByUsername(clean)
 
     if (!analysis) {
       res.status(404).json({ error: `No analysis found for user "${username}".` })

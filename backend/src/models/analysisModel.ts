@@ -2,12 +2,38 @@ import { v4 as uuidv4 } from 'uuid'
 import pool from '../config/database.js'
 import { ProfileAnalysis, PaginatedResponse } from '../types/index.js'
 
+function parseLanguagesJson(value: unknown): ProfileAnalysis['languages'] {
+  if (!value) {
+    return []
+  }
+
+  if (Array.isArray(value)) {
+    return value as ProfileAnalysis['languages']
+  }
+
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? (parsed as ProfileAnalysis['languages']) : []
+    } catch {
+      return []
+    }
+  }
+
+  return []
+}
+
+function normalizeUsername(username: string): string {
+  return username.trim().replace(/^@/, '').toLowerCase()
+}
+
 export async function saveAnalysis(analysis: Omit<ProfileAnalysis, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProfileAnalysis> {
   const connection = await pool.getConnection()
 
   try {
     const id = uuidv4()
     const now = new Date()
+    const normalizedUsername = normalizeUsername(analysis.username)
 
     const query = `
       INSERT INTO analyses (
@@ -41,7 +67,7 @@ export async function saveAnalysis(analysis: Omit<ProfileAnalysis, 'id' | 'creat
 
     const [result] = await connection.execute(query, [
       id,
-      analysis.username,
+      normalizedUsername,
       analysis.displayName,
       analysis.avatarUrl,
       analysis.bio,
@@ -69,6 +95,7 @@ export async function saveAnalysis(analysis: Omit<ProfileAnalysis, 'id' | 'creat
     return {
       id,
       ...analysis,
+      username: normalizedUsername,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     }
@@ -81,6 +108,8 @@ export async function getAnalysisByUsername(username: string): Promise<ProfileAn
   const connection = await pool.getConnection()
 
   try {
+    const normalizedUsername = normalizeUsername(username)
+
     const query = `
       SELECT 
         id, username, displayName, avatarUrl, bio, htmlUrl, company, location,
@@ -88,11 +117,11 @@ export async function getAnalysisByUsername(username: string): Promise<ProfileAn
         following, engagementScore, dominantLanguage, totalStars, totalForks,
         tractionRating, reposPerYear, languagesJson, createdAt, updatedAt
       FROM analyses
-      WHERE username = ?
+      WHERE LOWER(TRIM(username)) = ?
       LIMIT 1
     `
 
-    const [rows] = await connection.execute(query, [username])
+    const [rows] = await connection.execute(query, [normalizedUsername])
     const result = (rows as any[])[0]
 
     if (!result) {
@@ -101,7 +130,7 @@ export async function getAnalysisByUsername(username: string): Promise<ProfileAn
 
     return {
       ...result,
-      languages: JSON.parse(result.languagesJson || '[]'),
+      languages: parseLanguagesJson(result.languagesJson),
     }
   } finally {
     await connection.release()
@@ -135,7 +164,7 @@ export async function getAnalysisHistory(
 
     const data = (rows as any[]).map((row: any) => ({
       ...row,
-      languages: JSON.parse(row.languagesJson || '[]'),
+      languages: parseLanguagesJson(row.languagesJson),
     }))
 
     return {
