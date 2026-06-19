@@ -20,6 +20,12 @@ router.post('/analyze', analyzeUser)
 router.get('/analyze/:username', getUserAnalysis)
 
 /**
+ * GET /api/analyse/:username
+ * Compatibility alias for older clients using the British spelling
+ */
+router.get('/analyse/:username', getUserAnalysis)
+
+/**
  * GET /api/history
  * Get paginated list of all analyses
  * Query params: page (default: 1), limit (default: 10, max: 50)

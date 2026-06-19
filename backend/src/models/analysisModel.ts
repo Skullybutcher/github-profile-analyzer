@@ -131,7 +131,7 @@ export async function getAnalysisHistory(
       LIMIT ? OFFSET ?
     `
 
-    const [rows] = await connection.execute(query, [limit, offset])
+    const [rows] = await connection.query(query, [limit, offset])
 
     const data = (rows as any[]).map((row: any) => ({
       ...row,
