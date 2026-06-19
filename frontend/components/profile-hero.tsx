@@ -3,7 +3,7 @@
 import { CalendarDays, MapPin, Building2, LinkIcon, ExternalLink } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import type { ProfileAnalysis } from "@/lib/types"
 import { formatDate } from "@/lib/format"
 
@@ -38,12 +38,15 @@ export function ProfileHero({ profile }: { profile: ProfileAnalysis }) {
                 @{profile.username}
               </a>
             </div>
-            <Button asChild variant="secondary" size="sm">
-              <a href={profile.htmlUrl} target="_blank" rel="noopener noreferrer">
-                View on GitHub
-                <ExternalLink className="size-3.5" aria-hidden="true" />
-              </a>
-            </Button>
+            <a
+              href={profile.htmlUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              View on GitHub
+              <ExternalLink className="size-3.5" aria-hidden="true" />
+            </a>
           </div>
 
           {profile.bio ? (
