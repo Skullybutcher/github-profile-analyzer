@@ -211,7 +211,7 @@ Submission checklist:
 ## Live Endpoints
 
 - Backend root docs page: `GET /`
-- API base: `http://localhost:3001/api`
+- API base: `https://github-profile-analyzer-backend.vercel.app/api`
 
 ## License
 

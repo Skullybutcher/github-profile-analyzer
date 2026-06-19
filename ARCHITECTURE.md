@@ -1,117 +1,73 @@
 # GitHub Profile Analyzer - Architecture
 
 ## Overview
-Monorepo with separated **Frontend** (Next.js) and **Backend** (Express + MySQL).
+This repository is a monorepo with a UI app and a backend API:
 
-```
+- frontend: Next.js app for user interaction and visualization.
+- backend: Express + MySQL API for persistence and server-side analysis.
+
+The backend is the source of truth for cached analyses. The key persistence boundary is the `analyses` table.
+
+## Project Structure
+
+```text
 github-profile-analyser/
-├── frontend/                 # Next.js 13+ App Router (UI)
+├── frontend/
 │   ├── app/
 │   ├── components/
 │   ├── lib/
-│   ├── public/
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── backend/                  # Express.js API Server
+│   └── package.json
+├── backend/
 │   ├── src/
-│   │   ├── config/          # DB, env configs
-│   │   ├── controllers/      # Route handlers
-│   │   ├── models/          # Database queries
-│   │   ├── routes/          # API endpoints
-│   │   ├── middleware/      # Auth, error handling
-│   │   ├── services/        # Business logic (GitHub API, analysis)
-│   │   ├── types/           # TypeScript interfaces
-│   │   └── index.ts         # Express app entry
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── .env.example
-│   └── README.md
-│
-├── package.json             # Root workspace (pnpm workspaces)
-├── pnpm-workspace.yaml      # Workspace config
-└── ARCHITECTURE.md          # This file
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── types/
+│   │   └── index.ts
+│   ├── init.sql
+│   └── package.json
+├── package.json
+├── pnpm-workspace.yaml
+└── ARCHITECTURE.md
 ```
 
 ## Tech Stack
 
-### Frontend
-- **Next.js 13+** (App Router)
-- **React 18+**
-- **TypeScript**
-- **Shadcn/ui** (UI components)
-- **Axios** or native `fetch` for API calls
-
-### Backend
-- **Node.js** (LTS)
-- **Express.js**
-- **TypeScript**
-- **MySQL 8+** (via `mysql2` driver)
-- **dotenv** (config management)
-
-### Database
-- **MySQL 8+** (local dev or cloud: PlanetScale, AWS RDS, etc.)
+- Frontend: Next.js (App Router), React, TypeScript, shadcn/ui.
+- Backend: Node.js, Express, TypeScript.
+- Database: MySQL 8+ via `mysql2/promise`.
 
 ## API Contract
 
 ### POST /api/analyze
-Analyze a GitHub user and store insights.
+Analyzes a GitHub user and persists the result in MySQL.
 
-**Request:**
+Request:
+
 ```json
 {
   "username": "torvalds"
 }
 ```
 
-**Response:**
-```json
-{
-  "id": "uuid",
-  "username": "torvalds",
-  "displayName": "Linus Torvalds",
-  "avatarUrl": "...",
-  "bio": "...",
-  "engagementScore": 95,
-  "dominantLanguage": "C",
-  "languages": [
-    { "name": "C", "count": 45, "percentage": 78 },
-    ...
-  ],
-  "totalStars": 45000,
-  "totalForks": 15000,
-  "tractionRating": "Community Favorite",
-  "analyzedAt": "2026-06-18T...",
-  "createdAt": "2026-06-18T...",
-  "updatedAt": "2026-06-18T..."
-}
-```
+### GET /api/analyze/:username
+Returns cached analysis from the database only. Does not fallback to GitHub.
 
 ### GET /api/history
-List all analyzed profiles (paginated).
+Returns paginated cached analyses.
 
-**Query Params:**
-- `page` (default: 1)
-- `limit` (default: 10, max: 50)
+Query params:
 
-**Response:**
-```json
-{
-  "total": 42,
-  "page": 1,
-  "limit": 10,
-  "data": [{ ...analysis }, ...]
-}
-```
-
-### GET /api/analyze/:username
-Retrieve cached analysis.
-
-**Response:** Same as POST response.
+- page: default 1
+- limit: default 10, max 50
 
 ## Database Schema
 
-### `analyses` table
+The primary table is `analyses`:
+
 ```sql
 CREATE TABLE analyses (
   id VARCHAR(36) PRIMARY KEY,
@@ -136,82 +92,96 @@ CREATE TABLE analyses (
   tractionRating VARCHAR(100),
   reposPerYear DECIMAL(8,2),
   languagesJson JSON,
-  rawGithubData JSON,
   createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_username (username),
+  INDEX idx_createdAt (createdAt)
 );
 ```
 
-## Development Workflow
+## Decision Rationale
 
-### Setup
-```bash
-# Install dependencies for all workspaces
-pnpm install
+### Why monorepo?
 
-# or individually
-cd frontend && pnpm install
-cd backend && pnpm install
-```
+- Shared ownership and easier cross-layer refactors.
+- One PR can change API contracts and frontend consumption together.
+- Lower coordination overhead than separate repositories for this project size.
 
-### Run Locally
-```bash
-# Terminal 1: Backend (port 3001)
-cd backend
-pnpm dev
+Tradeoff: CI pipelines can become slower as the repository grows.
 
-# Terminal 2: Frontend (port 3000)
-cd frontend
-pnpm dev
-```
+### Why Express + MySQL for backend?
 
-### Environment Variables
+- Express keeps routing and middleware explicit and easy to debug.
+- MySQL provides mature indexing, JSON support, and predictable query behavior.
+- The app needs durable cache semantics, not just in-memory speed.
 
-**Backend** (`.env.local`):
-```
+Tradeoff: more operational setup than a pure serverless/no-db architecture.
+
+### Why connection pooling?
+
+- Reusing DB connections avoids connect/disconnect overhead per request.
+- Prevents exhausting database resources under concurrent load.
+- Improves tail latency for frequently hit endpoints like `/api/history`.
+
+Implementation note: the backend uses a shared `mysql2` pool with bounded connections.
+
+### Why upsert (`INSERT ... ON DUPLICATE KEY UPDATE`) instead of plain insert?
+
+- `username` is logically unique for cached analyses.
+- Re-analysis should refresh the same record, not create duplicates.
+- Upsert makes write behavior idempotent for repeated analyze calls.
+
+Tradeoff: historical versions are not kept in the same table. If audit/history snapshots are needed, introduce a separate versioned table.
+
+### Why store languages as JSON (`languagesJson`) instead of a join table?
+
+- Language breakdown is read and written as one blob with the analysis payload.
+- Avoids extra joins for the main response path.
+- Simpler schema and faster delivery for current read patterns.
+
+Tradeoff: ad-hoc SQL analytics on nested language fields are harder than fully normalized relational modeling.
+
+### Why normalize usernames?
+
+- GitHub usernames are case-insensitive for lookup semantics.
+- Trimming and lowercasing reduce cache misses from casing/input variance.
+- Makes endpoint behavior deterministic across clients.
+
+### Why pagination on history?
+
+- Prevents unbounded response payloads as data grows.
+- Stabilizes response times and memory use.
+- Keeps UI responsive while allowing expansion through page navigation.
+
+### Why database-only behavior for cached retrieval?
+
+- `GET /api/analyze/:username` is intentionally a cache read endpoint.
+- A strict cache contract makes behavior predictable for clients.
+- Avoids surprising side effects (network calls and writes) from a read route.
+
+If live fallback is ever required, it should be a separate endpoint or an explicit query flag.
+
+## Operational Notes
+
+- Backend defaults to port 3001.
+- If startup fails with `EADDRINUSE`, another process is already listening on that port.
+- Use `/health` to verify the active process.
+
+## Environment Variables
+
+Backend (`backend/.env.local`):
+
+```env
 NODE_ENV=development
 PORT=3001
 DATABASE_URL=mysql://user:password@localhost:3306/github_analyzer
-GITHUB_TOKEN=ghp_xxxxx  # Optional, for higher rate limits
+GITHUB_TOKEN=ghp_xxxxx
+FRONTEND_URL=http://localhost:3000
 ```
 
-**Frontend** (`.env.local`):
-```
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-```
+## Future Improvements
 
-## Deployment Strategy
-
-### Backend (Express)
-- **Docker Container** → Azure Container Apps, AWS ECS, or Railway
-- **Serverless** → AWS Lambda (with serverless-http adapter)
-- **VPS** → Vercel, Render, DigitalOcean App Platform
-
-### Frontend (Next.js)
-- **Vercel** (native Next.js hosting) ⭐
-- **Azure Static Web Apps** (with API integration)
-- **Docker** → Container Apps, ECS
-
-### Database
-- **PlanetScale** (MySQL-compatible, serverless)
-- **AWS RDS** (managed MySQL)
-- **DigitalOcean Managed Database**
-- **Local MySQL** (dev only)
-
-## Security Considerations
-
-1. **GitHub Token**: Store in env, never in code.
-2. **Database Credentials**: Use env variables or managed secrets.
-3. **API Rate Limiting**: Add middleware for brute-force protection.
-4. **CORS**: Configure origin whitelist on backend.
-5. **Input Validation**: Sanitize usernames on both client & server.
-6. **Error Handling**: Don't leak stack traces; log securely.
-
-## Next Steps
-
-1. **Scaffold backend** with Express + MySQL setup
-2. **Migrate business logic** from Next.js to backend services
-3. **Implement API endpoints** (POST /api/analyze, GET /api/history)
-4. **Update frontend** to call backend API
-5. **Add authentication** (optional: JWT, API keys)
-6. **Deploy** to production
+1. Add an explicit live-analysis endpoint separate from cache reads.
+2. Add API-level rate limiting and request tracing.
+3. Add integration tests for DB read/write and pagination semantics.
+4. Consider schema versioning if analytics requirements grow.
