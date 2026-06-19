@@ -4,13 +4,13 @@
   "description": "GitHub Profile Analyzer - Monorepo with Next.js Frontend & Express Backend",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel dev:frontend dev:backend",
-    "build": "pnpm --filter=frontend build && pnpm --filter=backend build",
-    "dev:frontend": "cd frontend && pnpm dev",
-    "dev:backend": "cd backend && pnpm dev",
-    "build:frontend": "cd frontend && pnpm build",
-    "build:backend": "cd backend && pnpm build",
-    "lint": "cd frontend && pnpm lint"
+    "dev": "start \"frontend\" cmd /c \"npm run dev --prefix frontend\" && start \"backend\" cmd /c \"npm run dev --prefix backend\"",
+    "build": "npm run build --prefix frontend && npm run build --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "lint": "npm run lint --prefix frontend"
   },
   "workspaces": [
     "frontend",
